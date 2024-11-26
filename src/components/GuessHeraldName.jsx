@@ -4,77 +4,94 @@ import React, { useState } from "react";
 const images = import.meta.glob("/src/assets/heralds/*.jpg", { eager: true });
 
 const GuessHeraldName = () => {
-  // Prepare an array of image objects with file paths and names
   const imageArray = Object.entries(images).map(([path, module]) => {
     const fileName = path.split("/").pop().replace(".jpg", ""); // Extract name
     return { src: module.default, name: fileName };
   });
 
-  const [currentImage, setCurrentImage] = useState(
-    imageArray[Math.floor(Math.random() * imageArray.length)]
-  );
-  const [guess, setGuess] = useState("");
-  const [feedback, setFeedback] = useState("");
+  // Helper function to shuffle an array
+  const shuffleArray = (array) => {
+    return array
+      .map((item) => ({ item, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ item }) => item);
+  };
 
-  // Track incorrect guesses for each image
-  const [wrongAnswerCounts, setWrongAnswerCounts] = useState(
+  const [shuffledImages, setShuffledImages] = useState(shuffleArray(imageArray));
+  // console.log(shuffledImages)
+
+  // Track how many times each image has been shown
+  const [shownCounts, setShownCounts] = useState(
     Object.fromEntries(imageArray.map(({ name }) => [name, 0]))
   );
 
+  console.log(shownCounts)
+
+  const [guess, setGuess] = useState("");
+  const [feedback, setFeedback] = useState("");
+
+  // Function to get the next image based on shownCounts
+  const getNextImage = () => {
+    const leastShown = Math.min(...Object.values(shownCounts)); // Find the minimum count
+    const candidates = shuffledImages.filter(
+      (image) => shownCounts[image.name] === leastShown
+    );
+    return candidates[Math.floor(Math.random() * candidates.length)]; // Randomly pick one
+  };
+
+  const [currentImage, setCurrentImage] = useState(getNextImage());
+
   const handleGuess = (e) => {
-    e.preventDefault(); // Prevent form submission
+    e.preventDefault();
 
     if (guess.trim().toLowerCase() === currentImage.name.toLowerCase()) {
       setFeedback("Correct!");
-      // Decrement the count for the current image if greater than 1
-      setWrongAnswerCounts((prevCounts) => ({
-        ...prevCounts,
-        [currentImage.name]: Math.max(prevCounts[currentImage.name] - 1, 0),
-      }));
     } else {
       setFeedback(`Incorrect. The correct answer is ${currentImage.name}.`);
-      // Increment the count for the current image
-      setWrongAnswerCounts((prevCounts) => ({
-        ...prevCounts,
-        [currentImage.name]: prevCounts[currentImage.name] + 1,
-      }));
     }
 
-    // Wait 2 seconds before resetting feedback and selecting a new image
     setTimeout(() => {
-      setFeedback(""); // Reset feedback
-      setCurrentImage(selectNextImage()); // Select a new image
-      setGuess(""); // Reset the guess input field
-    }, 2000); // 2 seconds delay
-  };
+      setFeedback(""); // Clear feedback
 
-  const selectNextImage = () => {
-    // Calculate total wrong answers
-    const totalWrong = Object.values(wrongAnswerCounts).reduce(
-      (sum, count) => sum + count,
-      0
-    );
+      setShownCounts((prevCounts) => {
+        const updatedCounts = {
+          ...prevCounts,
+          [currentImage.name]: prevCounts[currentImage.name] + 1,
+        };
 
-    // Assign weights to images based on wrong answer counts
-    const weightedImages = imageArray.flatMap((image) =>
-      Array(wrongAnswerCounts[image.name] + 1).fill(image)
-    );
+        // Check if all images have been shown at least once
+        const allShownOnce = Object.values(updatedCounts).every(
+          (count) => count > 0
+        );
 
-    // Randomly pick a weighted image
-    return weightedImages[Math.floor(Math.random() * weightedImages.length)];
+        if (allShownOnce) {
+          // Reshuffle the array and reset counts
+          setShuffledImages(shuffleArray(imageArray));
+          setCurrentImage(shuffleArray(imageArray)[0]); // Start with a new random image
+          return Object.fromEntries(
+            imageArray.map(({ name }) => [name, 0]) // Reset counts to 0
+          );
+        }
+
+        // Select the next image dynamically
+        setCurrentImage(getNextImage());
+
+        return updatedCounts; // Update counts
+      });
+
+      setGuess(""); // Reset guess input field
+    }, 2000);
   };
 
   return (
     <div className="max-w-80 w-80 flex flex-col items-center gap-4 border p-4 bg-gray-400 rounded text-[#252525]">
-      {/* Container for image and feedback */}
       <div className="relative w-full mb-4">
         <img
           src={currentImage.src}
           alt="Guess who?"
           className="w-full object-cover rounded shadow"
         />
-        
-        {/* Overlay feedback */}
+
         {feedback && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-xl font-semibold rounded">
             {feedback}

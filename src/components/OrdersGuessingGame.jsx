@@ -2,12 +2,49 @@ import React, { useState } from "react";
 import { heraldsAndOrders } from "../utils";
 
 const OrdersGuessingGame = () => {
+  // Initialize shownCounts with each herald's name starting at 0
+  const [shownCounts, setShownCounts] = useState(
+    Object.fromEntries(heraldsAndOrders.map((herald) => [herald.name, 0]))
+  );
+
+  // State for the current herald and the rest of the game
   const [currentHerald, setCurrentHerald] = useState(
     heraldsAndOrders[Math.floor(Math.random() * heraldsAndOrders.length)]
   );
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState("");
   const [showHint, setShowHint] = useState(false);
+
+  // Helper function to select the next herald, ensuring all are shown at least once
+  const getNextHerald = () => {
+    // Update shownCounts for the current herald
+    setShownCounts((prevCounts) => {
+      const updatedCounts = {
+        ...prevCounts,
+        [currentHerald.name]: prevCounts[currentHerald.name] + 1,
+      };
+
+      // Check if all heralds have been shown at least once
+      const allShownOnce = Object.values(updatedCounts).every((count) => count > 0);
+
+      if (allShownOnce) {
+        // Reset shownCounts and shuffle heralds
+        setShownCounts(
+          Object.fromEntries(heraldsAndOrders.map((herald) => [herald.name, 0]))
+        );
+      }
+
+      return updatedCounts;
+    });
+
+    // Select the next herald not shown the least recently
+    const availableHeralds = heraldsAndOrders.filter(
+      (herald) => shownCounts[herald.name] === 0
+    );
+    return availableHeralds.length > 0
+      ? availableHeralds[Math.floor(Math.random() * availableHeralds.length)]
+      : heraldsAndOrders[Math.floor(Math.random() * heraldsAndOrders.length)];
+  };
 
   const handleGuess = (e) => {
     e.preventDefault();
@@ -24,9 +61,7 @@ const OrdersGuessingGame = () => {
     // Wait 2 seconds before resetting feedback and selecting a new herald
     setTimeout(() => {
       setFeedback(""); // Reset feedback
-      setCurrentHerald(
-        heraldsAndOrders[Math.floor(Math.random() * heraldsAndOrders.length)]
-      ); // Select a new herald
+      setCurrentHerald(getNextHerald()); // Select a new herald
     }, 2000); // 2 seconds delay
   };
 

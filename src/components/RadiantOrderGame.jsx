@@ -5,25 +5,32 @@ const RadiantOrderGame = () => {
   const [currentGlyph, setCurrentGlyph] = useState(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [feedback, setFeedback] = useState('');
-  
-  // Track incorrect guesses for each glyph
+
+  // Track incorrect guesses and show counts for each glyph
   const [wrongAnswerCounts, setWrongAnswerCounts] = useState(
     Object.fromEntries(heraldsAndOrders.map(({ radiantGlyph }) => [radiantGlyph, 0]))
   );
 
-  // Select the next radiant glyph based on the wrong answer count
+  const [showCounts, setShowCounts] = useState(
+    Object.fromEntries(heraldsAndOrders.map(({ radiantGlyph }) => [radiantGlyph, 0]))
+  );
+
   const selectNextGlyph = () => {
-    const totalWrong = Object.values(wrongAnswerCounts).reduce((sum, count) => sum + count, 0);
-
-    // Create a weighted array based on wrong answer counts
+    // Create a weighted array based on wrong answer counts and adjust for show counts
     const weightedGlyphs = heraldsAndOrders.flatMap(({ radiantGlyph }) =>
-      Array(wrongAnswerCounts[radiantGlyph] + 1).fill(radiantGlyph)
+      Array(Math.max(0, wrongAnswerCounts[radiantGlyph] + 1 - showCounts[radiantGlyph])).fill(radiantGlyph)
     );
-
+  
+    // If weightedGlyphs is empty (all glyphs exhausted), fallback to a random glyph
+    if (weightedGlyphs.length === 0) {
+      return heraldsAndOrders[Math.floor(Math.random() * heraldsAndOrders.length)].radiantGlyph;
+    }
+  
     // Randomly pick a weighted radiant glyph
     const randomGlyph = weightedGlyphs[Math.floor(Math.random() * weightedGlyphs.length)];
     return randomGlyph;
   };
+  
 
   useEffect(() => {
     // Select a random radiant glyph to start the game
@@ -49,10 +56,16 @@ const RadiantOrderGame = () => {
       setFeedback('Correct! Well done.');
     } else {
       setFeedback(`Incorrect! The correct answer is ${correctOrder}.`);
+
+      // Update the wrong answer count for the current glyph
+      setWrongAnswerCounts((prevCounts) => ({
+        ...prevCounts,
+        [currentGlyph]: prevCounts[currentGlyph] + 1,
+      }));
     }
 
-    // Update the wrong answer count for the current glyph
-    setWrongAnswerCounts((prevCounts) => ({
+    // Update the show count for the current glyph
+    setShowCounts((prevCounts) => ({
       ...prevCounts,
       [currentGlyph]: prevCounts[currentGlyph] + 1,
     }));
@@ -100,8 +113,6 @@ const RadiantOrderGame = () => {
           </button>
         </div>
       </form>
-
-
     </div>
   );
 };

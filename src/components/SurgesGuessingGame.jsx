@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { surges } from '../utils';  // Import the surges array
+import React, { useState, useEffect } from "react";
+import { surges } from "../utils"; // Import the surges array
 
 const SurgesGuessingGame = () => {
   const [currentSurge, setCurrentSurge] = useState(null);
   const [options, setOptions] = useState([]);
-  const [feedback, setFeedback] = useState('');
-  const [selectedOption, setSelectedOption] = useState('');
-  const [showDescription, setShowDescription] = useState(false);  // State to control description visibility
+  const [feedback, setFeedback] = useState("");
+  const [selectedOption, setSelectedOption] = useState("");
+  const [showDescription, setShowDescription] = useState(false); // State to control description visibility
+  const [showCounts, setShowCounts] = useState(() =>
+    surges.reduce((acc, surge) => {
+      acc[surge.name] = 0; // Initialize counts for each surge
+      return acc;
+    }, {})
+  );
 
   useEffect(() => {
     generateNewQuestion();
@@ -19,16 +25,26 @@ const SurgesGuessingGame = () => {
 
   // Generate a new question with a random surge and options
   const generateNewQuestion = () => {
-    const randomSurge = surges[Math.floor(Math.random() * surges.length)];
+    const sortedSurges = surges.sort(
+      (a, b) => showCounts[a.name] - showCounts[b.name]
+    ); // Sort surges by show count, ascending
+    const randomSurge = sortedSurges[0]; // Choose the least shown surge
     setCurrentSurge(randomSurge);
 
     const wrongOptions = surges
-      .filter(surge => surge.name !== randomSurge.name) // Remove the correct surge
+      .filter((surge) => surge.name !== randomSurge.name) // Remove the correct surge
       .slice(0, 3); // Take 3 wrong options
     const allOptions = shuffleArray([randomSurge, ...wrongOptions]); // Combine and shuffle
     setOptions(allOptions);
-    setFeedback('');
-    setSelectedOption('');
+
+    // Update show count for the selected surge
+    setShowCounts((prev) => ({
+      ...prev,
+      [randomSurge.name]: prev[randomSurge.name] + 1,
+    }));
+
+    setFeedback("");
+    setSelectedOption("");
   };
 
   // Handle the option selection and provide instant feedback
@@ -37,7 +53,7 @@ const SurgesGuessingGame = () => {
 
     const isCorrect = surgeName === currentSurge.name;
     if (isCorrect) {
-      setFeedback('Correct!');
+      setFeedback("Correct!");
     } else {
       setFeedback(`Incorrect. The correct answer is ${currentSurge.name}.`);
     }
@@ -61,7 +77,11 @@ const SurgesGuessingGame = () => {
         {/* Surge Image and Description Overlay */}
         <div className="relative w-full">
           {/* Surge Image */}
-          <img src={currentSurge.glyph} alt={currentSurge.name} className="w-full object-contain mb-4" />
+          <img
+            src={currentSurge.glyph}
+            alt={currentSurge.name}
+            className="w-full object-contain mb-4"
+          />
 
           {/* Surge description overlay */}
           {showDescription && (
@@ -76,7 +96,7 @@ const SurgesGuessingGame = () => {
           onClick={toggleDescription}
           className="mb-2 text-blue-500 hover:text-blue-700"
         >
-          {showDescription ? 'Hide Description' : 'Show Description'}
+          {showDescription ? "Hide Description" : "Show Description"}
         </button>
 
         {/* Feedback overlay */}
@@ -93,8 +113,8 @@ const SurgesGuessingGame = () => {
             key={index}
             className={`w-1/2 px-4 py-2 border rounded ${
               selectedOption === option.name
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700'
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 text-gray-700"
             }`}
             onClick={() => handleOptionSelect(option.name)}
           >

@@ -11,14 +11,22 @@ const RadiantSprenGame = () => {
     Object.fromEntries(heraldsAndOrders.map(({ spren }) => [spren, 0]))
   );
 
-  // Select the next radiant herald based on the wrong answer count
-  const selectNextHerald = () => {
-    const totalWrong = Object.values(wrongAnswerCounts).reduce((sum, count) => sum + count, 0);
+  // Track how many times to show a spren (to control frequency based on incorrect guesses)
+  const [showCounts, setShowCounts] = useState(
+    Object.fromEntries(heraldsAndOrders.map(({ spren }) => [spren, 0]))
+  );
 
-    // Create a weighted array based on wrong answer counts
+  // Select the next radiant herald based on the wrong answer count and show counts
+  const selectNextHerald = () => {
+    // Create a weighted array based on wrong answer counts and show counts
     const weightedHeralds = heraldsAndOrders.flatMap(({ spren }) =>
-      Array(wrongAnswerCounts[spren] + 1).fill(spren)
+      Array(Math.max(0, wrongAnswerCounts[spren] + 1 - showCounts[spren])).fill(spren)
     );
+
+    // If weightedHeralds is empty (all glyphs exhausted), fallback to a random herald
+    if (weightedHeralds.length === 0) {
+      return heraldsAndOrders[Math.floor(Math.random() * heraldsAndOrders.length)].spren;
+    }
 
     // Randomly pick a weighted radiant herald
     const randomHerald = weightedHeralds[Math.floor(Math.random() * weightedHeralds.length)];
@@ -47,15 +55,24 @@ const RadiantSprenGame = () => {
 
     if (userAnswer.toLowerCase() === correctSpren.toLowerCase()) {
       setFeedback('Correct! Well done.');
+      // Reset show count for the correct spren
+      setShowCounts((prevCounts) => ({
+        ...prevCounts,
+        [currentHerald]: 0,
+      }));
     } else {
       setFeedback(`Incorrect! The correct answer is ${correctSpren}.`);
+      // Increment the wrong answer count for the current spren
+      setWrongAnswerCounts((prevCounts) => ({
+        ...prevCounts,
+        [currentHerald]: prevCounts[currentHerald] + 1,
+      }));
+      // Increment the show count to ensure it is shown again
+      setShowCounts((prevCounts) => ({
+        ...prevCounts,
+        [currentHerald]: prevCounts[currentHerald] + 1,
+      }));
     }
-
-    // Update the wrong answer count for the current spren
-    setWrongAnswerCounts((prevCounts) => ({
-      ...prevCounts,
-      [currentHerald]: prevCounts[currentHerald] + 1,
-    }));
 
     // Show the next radiant herald after a delay
     setTimeout(() => {
