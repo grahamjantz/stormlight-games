@@ -1,13 +1,29 @@
 import React, { useState } from "react";
 
 // Dynamically import all images from the assets/heralds folder
-const images = import.meta.glob("/src/assets/heralds/*.jpg", { eager: true });
+const images = import.meta.glob("/public/heralds/*.jpg", { eager: true });
 
 const GuessHeraldName = () => {
   const imageArray = Object.entries(images).map(([path, module]) => {
     const fileName = path.split("/").pop().replace(".jpg", ""); // Extract name
     return { src: module.default, name: fileName };
   });
+
+  // const imageArray = [
+  //   "Battar",
+  //   "Chanarach",
+  //   "Ishar",
+  //   "Jezrien",
+  //   "Kalak",
+  //   "Nale",
+  //   "Pailiah",
+  //   "Shalash",
+  //   "Talenel",
+  //   "Vedel"
+  // ].map((name) => ({
+  //   src: `/heralds/${name}.jpg`, // Public folder URL
+  //   name,
+  // }));
 
   // Helper function to shuffle an array
   const shuffleArray = (array) => {
@@ -25,7 +41,6 @@ const GuessHeraldName = () => {
     Object.fromEntries(imageArray.map(({ name }) => [name, 0]))
   );
 
-  console.log(shownCounts)
 
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState("");
